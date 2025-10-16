@@ -1,5 +1,5 @@
 //#region Speech Recognition and Synthesis
-
+let currentTTSEngine = localStorage.getItem('ttsEngine') || 'google';
 let speechEnabled = false;
 let selectedVoice = null;
 let isListening = true;
