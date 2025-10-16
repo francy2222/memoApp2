@@ -1,5 +1,8 @@
-// quiz.js - Logica del quiz
+// quiz.js - Logica del quiz con supporto Edge TTS
 //#region Quiz Functions
+
+// Variabile globale per il motore TTS (condivisa con altri file)
+let currentTTSEngine = localStorage.getItem('ttsEngine') || 'google';
 
 function showQuestion() {
     waitingForCorrectTyping = false;
@@ -81,34 +84,88 @@ function showQuestion() {
         questionElement.textContent = questionText;
     }
 
-    // Gestione sintesi vocale
+    // Gestione sintesi vocale - MODIFICATA PER SUPPORTARE EDGE TTS
     if (speechEnabled && selectedVoice) {
-        speechSynthesis.cancel();
         let textToRead = "";
         if (questionText.includes('url::')) {
             textToRead = questionText.split('url::')[0].trim();
         } else {
             textToRead = questionText;
         }
-        const utterance = new SpeechSynthesisUtterance(textToRead);
-        utterance.voice = selectedVoice;
 
-        const words = textToRead.trim().split(/\s+/).length;
-        const estimatedDuration = words / 200 * 60 * 1000 + 300;
+        // Controlla quale motore TTS usare
+        if (currentTTSEngine === 'edge' && typeof EdgeTTSModule !== 'undefined') {
+            // USA EDGE TTS
+            console.log('[Quiz] Usando Edge TTS per leggere domanda');
+            
+            // Ferma eventuali sintesi in corso
+            if (typeof EdgeTTSModule.stop === 'function') {
+                EdgeTTSModule.stop();
+            }
+            
+            EdgeTTSModule.speak(textToRead, {
+                voice: selectedVoice // selectedVoice contiene l'ID della voce Edge
+            }).then(audioBlob => {
+                const audioUrl = URL.createObjectURL(audioBlob);
+                const audio = new Audio(audioUrl);
+                
+                audio.onended = () => {
+                    URL.revokeObjectURL(audioUrl);
+                    
+                    // Gestisci riconoscimento vocale se attivo
+                    if (typeof isListening !== 'undefined' && !inputEnabled) {
+                        isListening = true;
+                        const input = document.getElementById('answerInput');
+                        if (input) {
+                            input.placeholder = "Ascolto...";
+                        }
+                        console.log('[Quiz] Edge TTS terminato, riconoscimento vocale attivato');
+                    }
+                };
+                
+                audio.onerror = (e) => {
+                    console.error('[Quiz] Errore riproduzione audio Edge TTS:', e);
+                };
+                
+                audio.play().catch(error => {
+                    console.error('[Quiz] Errore play() Edge TTS:', error);
+                });
+                
+            }).catch(error => {
+                console.error('[Quiz] Errore Edge TTS:', error);
+                // Fallback a Google TTS in caso di errore
+                useFallbackGoogleTTS(textToRead);
+            });
+            
+        } else {
+            // USA GOOGLE TTS (codice originale)
+            console.log('[Quiz] Usando Google TTS per leggere domanda');
+            speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(textToRead);
+            utterance.voice = selectedVoice;
 
-        utterance.onstart = function () {
-            const input = document.getElementById('answerInput');
-            input.placeholder = "Wait...";
-            isListening = false;
-            console.log('Sintesi vocale iniziata, isListening false');
+            const words = textToRead.trim().split(/\s+/).length;
+            const estimatedDuration = words / 200 * 60 * 1000 + 300;
 
-            setTimeout(() => {
-                isListening = true;
-                input.placeholder = "Ascolto...";
-                console.log('isListening true');
-            }, estimatedDuration);
-        };
-        speechSynthesis.speak(utterance);
+            utterance.onstart = function () {
+                const input = document.getElementById('answerInput');
+                input.placeholder = "Wait...";
+                isListening = false;
+                console.log('Sintesi vocale iniziata, isListening false');
+
+                setTimeout(() => {
+                    isListening = true;
+                    input.placeholder = "Ascolto...";
+                    console.log('isListening true');
+                }, estimatedDuration);
+            };
+            
+            utterance.onerror = function(e) {
+                console.error('[Quiz] Errore Google TTS:', e);
+            };
+            
+            speechSynthesis.speak(utterance);
+        }
     }
 
     // Aggiorna il contatore
@@ -121,6 +178,25 @@ function showQuestion() {
     feedback.className = 'feedback';
 
     answerInput.focus();
+}
+
+// Funzione di fallback per Google TTS
+function useFallbackGoogleTTS(textToRead) {
+    console.log('[Quiz] Fallback a Google TTS');
+    if ('speechSynthesis' in window) {
+        speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(textToRead);
+        
+        // Trova una voce italiana
+        const voices = speechSynthesis.getVoices();
+        const italianVoice = voices.find(v => v.lang.includes('it-IT'));
+        if (italianVoice) {
+            utterance.voice = italianVoice;
+        }
+        
+        utterance.lang = 'it-IT';
+        speechSynthesis.speak(utterance);
+    }
 }
 
 function checkAnswer() {
@@ -210,64 +286,45 @@ function copyQuestion() {
 
 function deleteQuestion() {
     if (confirm('Sei sicuro di voler eliminare questa domanda?')) {
-        if (questions.length <= 1) {
-            alert('Non puoi eliminare l\'ultima domanda del questionario');
-            return;
-        }
-
         questions.splice(currentQuestionIndex, 1);
-
-        if (currentQuestionIndex >= questions.length) {
-            currentQuestionIndex = questions.length - 1;
+        if (questions.length === 0) {
+            alert('Non ci sono più domande nel quiz.');
+            document.getElementById('quizContainer').classList.add('hide');
+        } else {
+            if (currentQuestionIndex >= questions.length) {
+                currentQuestionIndex = questions.length - 1;
+            }
+            showQuestion();
         }
-        showQuestion();
     }
 }
 
 function randomizeQuestions() {
-    if (questions.length > 0) {
-        questions = shuffleArray([...questions]);
-        currentQuestionIndex = 0;
-        showQuestion();
+    for (let i = questions.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [questions[i], questions[j]] = [questions[j], questions[i]];
     }
-}
-
-function reverseQuestions() {
-    if (questions.length > 0) {
-        questions = questions.reverse();
-        currentQuestionIndex = 0;
-        showQuestion();
-    }
+    currentQuestionIndex = 0;
+    showQuestion();
 }
 
 function restartQuiz() {
-    if (questions.length > 0) {
-        currentQuestionIndex = 0;
-        waitingForCorrectTyping = false;
-        expectedAnswer = '';
-        showQuestion();
-    }
+    currentQuestionIndex = 0;
+    showQuestion();
+}
+
+function reverseQuestions() {
+    questions.reverse();
+    currentQuestionIndex = 0;
+    showQuestion();
 }
 
 function swapQuestionsAndAnswers() {
-    questions.forEach(question => {
-        let originalQuestion = question.question;
-        let originalAnswer = question.answer;
-
-        if (originalQuestion.includes('url::')) {
-            const parts = originalQuestion.split('url::');
-            question.answer = parts[0].trim();
-            question.question = originalAnswer + ' url::' + parts[1];
-        } else if (originalQuestion.includes('continue::')) {
-            const parts = originalQuestion.split('continue::');
-            const continuePart = 'continue::';
-            originalQuestion = parts[0].trim();
-        } else {
-            question.question = originalAnswer;
-            question.answer = originalQuestion;
-        }
+    questions.forEach(q => {
+        const temp = q.question;
+        q.question = q.answer;
+        q.answer = temp;
     });
-
     showQuestion();
 }
 
