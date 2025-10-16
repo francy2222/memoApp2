@@ -5,6 +5,132 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta charset="UTF-8">
     <link rel="stylesheet" href="css/styles.css">
+    <style>
+        /* Stili aggiuntivi per TTS */
+        #ttsToggleButton {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 5px 10px;
+            min-width: 60px;
+        }
+
+        #ttsEngineIcon {
+            font-size: 20px;
+        }
+
+        #ttsEngineName {
+            margin-top: 2px;
+            font-size: 10px;
+        }
+
+        .tts-settings-modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.4);
+            align-items: center;
+            justify-content: center;
+        }
+
+        .tts-settings-modal.show {
+            display: flex;
+        }
+
+        .tts-modal-content {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow: auto;
+        }
+
+        .tts-modal-header {
+            padding: 20px;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .tts-modal-body {
+            padding: 20px;
+        }
+
+        .tts-modal-footer {
+            padding: 15px 20px;
+            border-top: 1px solid #e0e0e0;
+            text-align: right;
+        }
+
+        .tts-modal-footer button {
+            margin-left: 10px;
+            padding: 8px 15px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            cursor: pointer;
+        }
+
+        .tts-modal-footer button:first-child {
+            background-color: #4CAF50;
+            color: white;
+            border-color: #4CAF50;
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #999;
+        }
+
+        .setting-group {
+            margin-bottom: 20px;
+        }
+
+        .setting-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .radio-group label {
+            display: block;
+            margin: 10px 0;
+            cursor: pointer;
+            font-weight: normal;
+        }
+
+        .radio-group input[type="radio"] {
+            margin-right: 8px;
+        }
+
+        select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .info-box {
+            margin-top: 20px;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 5px;
+        }
+
+        .info-box ul {
+            margin: 5px 0;
+            padding-left: 20px;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -23,7 +149,11 @@
                 <button id="playButton" class="tool-btn">
                     <span id="playIcon">▶️</span>
                 </button>
-                <button id="edgeTTSButton" class="tool-btn" title="Edge TTS">🔊</button>
+                <!-- Nuovo pulsante TTS Toggle -->
+                <button id="ttsToggleButton" class="tool-btn" title="Cambia motore TTS">
+                    <span id="ttsEngineIcon">🔊</span>
+                    <span id="ttsEngineName">Google</span>
+                </button>
                 <button id="certificateButton" class="tool-btn" title="Certificato">📜</button>
             </div>
             <div class="question-counter">
@@ -74,7 +204,63 @@
         </div>
     </div>
 
-    <!-- Dialogs -->
+    <!-- Dialog Impostazioni TTS -->
+    <div id="ttsSettingsDialog" class="tts-settings-modal">
+        <div class="tts-modal-content">
+            <div class="tts-modal-header">
+                <h2>Impostazioni Sintesi Vocale</h2>
+                <button class="close-modal" onclick="closeTTSSettings()">&times;</button>
+            </div>
+            <div class="tts-modal-body">
+                <div class="setting-group">
+                    <label>Motore TTS:</label>
+                    <div class="radio-group">
+                        <label>
+                            <input type="radio" name="ttsEngine" value="google" checked>
+                            Google TTS (Veloce ma instabile)
+                        </label>
+                        <label>
+                            <input type="radio" name="ttsEngine" value="edge">
+                            Edge TTS (Stabile, eventi precisi)
+                        </label>
+                    </div>
+                </div>
+                
+                <div id="edgeVoiceSettings" style="display: none;">
+                    <div class="setting-group">
+                        <label for="edgeVoiceSelect">Voce Edge:</label>
+                        <select id="edgeVoiceSelect">
+                            <option value="it-IT-IsabellaNeural">Isabella (Donna)</option>
+                            <option value="it-IT-ElsaNeural">Elsa (Donna)</option>
+                            <option value="it-IT-DiegoNeural">Diego (Uomo)</option>
+                            <option value="it-IT-GiuseppeNeural">Giuseppe (Uomo)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="setting-group">
+                        <label>
+                            <input type="checkbox" id="enableTTSCache">
+                            Abilita cache audio (più veloce dopo prima generazione)
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="info-box">
+                    <strong>Note:</strong>
+                    <ul>
+                        <li><strong>Google:</strong> Più veloce ma può crashare, no eventi fine audio</li>
+                        <li><strong>Edge:</strong> Più lento ma stabile, eventi precisi per riconoscimento vocale</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="tts-modal-footer">
+                <button onclick="saveTTSSettings()">Salva</button>
+                <button onclick="closeTTSSettings()">Annulla</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dialogs esistenti -->
     <dialog id="voiceSettingsDialog" class="settings-dialog">
         <form method="dialog">
             <h3>Impostazioni lettura</h3>
@@ -122,36 +308,6 @@
         </form>
     </dialog>
 
-    <!-- Dialog Edge TTS -->
-    <dialog id="edgeTTSDialog" class="settings-dialog">
-        <form method="dialog">
-            <h3>Impostazioni Edge TTS</h3>
-            <div class="voice-setting">
-                <label for="edgeVoiceSelect">Voce Edge:</label>
-                <select id="edgeVoiceSelect" required>
-                    <option value="it-IT-DiegoNeural">Diego (Italiano)</option>
-                    <option value="it-IT-ElsaNeural">Elsa (Italiano)</option>
-                    <option value="it-IT-IsabellaNeural">Isabella (Italiano)</option>
-                    <option value="it-IT-GiuseppeNeural">Giuseppe (Italiano)</option>
-                </select>
-            </div>
-            <div class="voice-setting">
-                <label for="edgeSpeed">Velocità:</label>
-                <input type="range" id="edgeSpeed" min="0.5" max="2" step="0.1" value="1">
-                <span id="speedValue">1.0x</span>
-            </div>
-            <div class="voice-setting">
-                <label for="edgePitch">Tonalità:</label>
-                <input type="range" id="edgePitch" min="-50" max="50" step="1" value="0">
-                <span id="pitchValue">0</span>
-            </div>
-            <div class="dialog-buttons">
-                <button type="submit" value="confirm">OK</button>
-                <button type="button" onclick="this.closest('dialog').close()">Annulla</button>
-            </div>
-        </form>
-    </dialog>
-
     <!-- Dialog Certificato -->
     <dialog id="certificateDialog" class="settings-dialog">
         <form method="dialog">
@@ -177,12 +333,309 @@
 
     <!-- Scripts -->
     <script src="js/utils.js"></script>
-    <script src="js/edgeTTS.js"></script>
+    <!-- Aggiungi Edge TTS Module -->
+    <script src="edge_tts_module.js"></script>
     <script src="js/quiz.js"></script>
     <script src="js/speech.js"></script>
     <script src="js/autoplay.js"></script>
     <script src="js/certificate.js"></script>
     <script src="js/ui.js"></script>
     <script src="js/main.js"></script>
+    
+    <!-- Script integrazione Edge TTS -->
+    <script>
+    //#region Configurazione TTS
+    // Variabili globali per TTS
+    let currentTTSEngine = localStorage.getItem('ttsEngine') || 'google';
+    let edgeTTSVoice = localStorage.getItem('edgeTTSVoice') || 'it-IT-IsabellaNeural';
+    let edgeTTSCacheEnabled = localStorage.getItem('edgeTTSCache') === 'true';
+    let isSpeaking = false;
+    let currentAudio = null;
+
+    // Inizializza Edge TTS
+    document.addEventListener('DOMContentLoaded', function() {
+        // Inizializza Edge TTS Module
+        if (typeof EdgeTTSModule !== 'undefined') {
+            EdgeTTSModule.init({
+                useCache: edgeTTSCacheEnabled,
+                defaultVoice: edgeTTSVoice,
+                onStart: () => {
+                    console.log('[MemoApp] Edge TTS iniziato');
+                    isSpeaking = true;
+                    updatePlayButton(true);
+                },
+                onEnd: () => {
+                    console.log('[MemoApp] Edge TTS completato');
+                    isSpeaking = false;
+                    updatePlayButton(false);
+                    
+                    // Qui puoi avviare il riconoscimento vocale
+                    if (typeof startVoiceRecognition === 'function' && window.isListeningMode) {
+                        setTimeout(() => startVoiceRecognition(), 200);
+                    }
+                },
+                onBoundary: (word, offset) => {
+                    console.log(`[MemoApp] Parola: ${word} a offset ${offset}`);
+                },
+                onError: (error) => {
+                    console.error('[MemoApp] Errore Edge TTS:', error);
+                    alert('Errore nella sintesi vocale: ' + error.message);
+                }
+            });
+        }
+        
+        // Aggiorna UI in base al motore selezionato
+        updateTTSButtonUI();
+        
+        // Event listener per toggle veloce
+        const ttsToggle = document.getElementById('ttsToggleButton');
+        if (ttsToggle) {
+            ttsToggle.addEventListener('click', toggleTTSEngine);
+            
+            // Click lungo per impostazioni
+            let ttsButtonTimer;
+            ttsToggle.addEventListener('mousedown', () => {
+                ttsButtonTimer = setTimeout(() => {
+                    openTTSSettings();
+                }, 500);
+            });
+            
+            ttsToggle.addEventListener('mouseup', () => {
+                clearTimeout(ttsButtonTimer);
+            });
+            
+            ttsToggle.addEventListener('mouseleave', () => {
+                clearTimeout(ttsButtonTimer);
+            });
+        }
+        
+        // Listener per cambio motore nel dialog
+        document.querySelectorAll('input[name="ttsEngine"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                const edgeSettings = document.getElementById('edgeVoiceSettings');
+                if (edgeSettings) {
+                    edgeSettings.style.display = e.target.value === 'edge' ? 'block' : 'none';
+                }
+            });
+        });
+    });
+    //#endregion
+
+    //#region Funzioni TTS
+    // Toggle tra motori TTS
+    function toggleTTSEngine() {
+        currentTTSEngine = currentTTSEngine === 'google' ? 'edge' : 'google';
+        localStorage.setItem('ttsEngine', currentTTSEngine);
+        updateTTSButtonUI();
+        
+        // Mostra notifica
+        console.log(`Motore TTS cambiato a: ${currentTTSEngine.toUpperCase()}`);
+    }
+
+    // Aggiorna UI pulsante TTS
+    function updateTTSButtonUI() {
+        const icon = document.getElementById('ttsEngineIcon');
+        const name = document.getElementById('ttsEngineName');
+        
+        if (currentTTSEngine === 'edge') {
+            icon.textContent = '🎯';
+            name.textContent = 'Edge';
+        } else {
+            icon.textContent = '🔊';
+            name.textContent = 'Google';
+        }
+    }
+
+    // Apri dialog impostazioni
+    function openTTSSettings() {
+        const dialog = document.getElementById('ttsSettingsDialog');
+        if (dialog) {
+            dialog.classList.add('show');
+            
+            // Imposta valori correnti
+            document.querySelector(`input[name="ttsEngine"][value="${currentTTSEngine}"]`).checked = true;
+            document.getElementById('edgeVoiceSelect').value = edgeTTSVoice;
+            document.getElementById('enableTTSCache').checked = edgeTTSCacheEnabled;
+            
+            // Mostra/nascondi opzioni Edge
+            const edgeSettings = document.getElementById('edgeVoiceSettings');
+            edgeSettings.style.display = currentTTSEngine === 'edge' ? 'block' : 'none';
+        }
+    }
+
+    // Chiudi dialog
+    function closeTTSSettings() {
+        const dialog = document.getElementById('ttsSettingsDialog');
+        if (dialog) {
+            dialog.classList.remove('show');
+        }
+    }
+
+    // Salva impostazioni
+    function saveTTSSettings() {
+        const selectedEngine = document.querySelector('input[name="ttsEngine"]:checked').value;
+        const selectedVoice = document.getElementById('edgeVoiceSelect').value;
+        const cacheEnabled = document.getElementById('enableTTSCache').checked;
+        
+        // Salva in localStorage
+        currentTTSEngine = selectedEngine;
+        edgeTTSVoice = selectedVoice;
+        edgeTTSCacheEnabled = cacheEnabled;
+        
+        localStorage.setItem('ttsEngine', currentTTSEngine);
+        localStorage.setItem('edgeTTSVoice', edgeTTSVoice);
+        localStorage.setItem('edgeTTSCache', cacheEnabled);
+        
+        // Aggiorna Edge TTS config
+        if (typeof EdgeTTSModule !== 'undefined') {
+            EdgeTTSModule.config.defaultVoice = edgeTTSVoice;
+            EdgeTTSModule.setCacheEnabled(cacheEnabled);
+        }
+        
+        // Aggiorna UI
+        updateTTSButtonUI();
+        closeTTSSettings();
+        
+        console.log('Impostazioni TTS salvate');
+    }
+
+    // Funzione unificata per sintesi vocale
+    async function speakText(text, callback) {
+        if (!text || text.trim() === '') {
+            if (callback) callback();
+            return;
+        }
+        
+        // Ferma audio in corso
+        stopSpeaking();
+        
+        if (currentTTSEngine === 'edge' && typeof EdgeTTSModule !== 'undefined') {
+            // USA EDGE TTS
+            try {
+                const audioBlob = await EdgeTTSModule.speak(text, {
+                    voice: edgeTTSVoice
+                });
+                
+                // Crea audio element e riproduci
+                const audioUrl = URL.createObjectURL(audioBlob);
+                currentAudio = new Audio(audioUrl);
+                
+                currentAudio.onended = () => {
+                    URL.revokeObjectURL(audioUrl);
+                    currentAudio = null;
+                    isSpeaking = false;
+                    updatePlayButton(false);
+                    if (callback) callback();
+                };
+                
+                currentAudio.onerror = (e) => {
+                    console.error('[MemoApp] Errore riproduzione audio:', e);
+                    isSpeaking = false;
+                    updatePlayButton(false);
+                    if (callback) callback();
+                };
+                
+                isSpeaking = true;
+                updatePlayButton(true);
+                await currentAudio.play();
+                
+            } catch (error) {
+                console.error('[MemoApp] Errore Edge TTS:', error);
+                alert('Errore TTS: ' + error.message);
+                if (callback) callback();
+            }
+            
+        } else {
+            // USA GOOGLE TTS (codice esistente)
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(text);
+                
+                // Trova voce Google italiana
+                const voices = speechSynthesis.getVoices();
+                const googleVoice = voices.find(v => 
+                    v.lang.includes('it-IT') && v.name.includes('Google')
+                );
+                
+                if (googleVoice) {
+                    utterance.voice = googleVoice;
+                } else {
+                    // Fallback a voce italiana di sistema
+                    const italianVoice = voices.find(v => v.lang.includes('it-IT'));
+                    if (italianVoice) utterance.voice = italianVoice;
+                }
+                
+                utterance.lang = 'it-IT';
+                utterance.rate = 1.0;
+                
+                utterance.onstart = () => {
+                    isSpeaking = true;
+                    updatePlayButton(true);
+                };
+                
+                utterance.onend = () => {
+                    isSpeaking = false;
+                    updatePlayButton(false);
+                    if (callback) callback();
+                };
+                
+                utterance.onerror = (e) => {
+                    console.error('[MemoApp] Errore Google TTS:', e);
+                    isSpeaking = false;
+                    updatePlayButton(false);
+                    if (callback) callback();
+                };
+                
+                speechSynthesis.speak(utterance);
+            } else {
+                alert('Sintesi vocale non supportata nel browser');
+                if (callback) callback();
+            }
+        }
+    }
+
+    // Ferma sintesi in corso
+    function stopSpeaking() {
+        if (currentTTSEngine === 'edge' && typeof EdgeTTSModule !== 'undefined') {
+            EdgeTTSModule.stop();
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio = null;
+            }
+        } else {
+            speechSynthesis.cancel();
+        }
+        
+        isSpeaking = false;
+        updatePlayButton(false);
+    }
+
+    // Aggiorna pulsante play
+    function updatePlayButton(speaking) {
+        const playIcon = document.getElementById('playIcon');
+        if (playIcon) {
+            playIcon.textContent = speaking ? '⏸️' : '▶️';
+        }
+    }
+
+    // Override della funzione readQuestion se esiste
+    if (typeof window.readQuestion !== 'undefined') {
+        const originalReadQuestion = window.readQuestion;
+        window.readQuestion = function() {
+            const questionText = document.getElementById('questionText').textContent;
+            speakText(questionText, () => {
+                console.log('[MemoApp] Lettura domanda completata');
+            });
+        };
+    }
+
+    // Override della funzione readFeedback se esiste
+    if (typeof window.readFeedback !== 'undefined') {
+        const originalReadFeedback = window.readFeedback;
+        window.readFeedback = function(text) {
+            speakText(text);
+        };
+    }
+    //#endregion
+    </script>
 </body>
 </html>
