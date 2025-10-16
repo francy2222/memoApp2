@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <title>MemoApp - Quiz Interattivo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Barra degli strumenti -->
+        <div class="edit-toolbar">
+            <div class="edit-tools">
+                <input type="file" id="xmlFile" accept=".xml">
+                <div class="divider"></div>
+                <button id="restartButton" class="tool-btn" title="Ricomincia">🔄</button>
+                <button id="randomizeButton" class="tool-btn" title="Ordine casuale">🔀</button>
+                <button id="reverseButton" class="tool-btn" title="Ordine inverso">↕️</button>
+                <button id="swapQAButton" class="tool-btn" title="Scambia domande/risposte">⇄</button>
+                <div class="divider"></div>
+                <button id="deleteQuestionButton" class="tool-btn" title="Elimina domanda">🗑️</button>
+                <div class="divider"></div>
+                <button id="playButton" class="tool-btn">
+                    <span id="playIcon">▶️</span>
+                </button>
+                <button id="edgeTTSButton" class="tool-btn" title="Edge TTS">🔊</button>
+                <button id="certificateButton" class="tool-btn" title="Certificato">📜</button>
+            </div>
+            <div class="question-counter">
+                Domanda <span id="currentQuestionNum">0</span> di <span id="totalQuestions">0</span>
+            </div>
+        </div>
+
+        <!-- Container principale quiz -->
+        <div id="quizContainer" class="hide">
+            <div class="question-container">
+                <div id="questionText"></div>
+                <div id="imageContainer" class="image-container"></div>
+                <div id="feedback" class="feedback"></div>
+                
+                <div class="input-container">
+                    <input type="text" id="answerInput" placeholder="Scrivi la tua risposta...">
+                    <button id="toggleInput" class="control-btn" title="Attiva/Disattiva input">
+                        <span id="toggleIcon">🎤</span>
+                    </button>
+                </div>
+
+                <div class="control-buttons">
+                    <button id="checkButton">Verifica</button>
+                    <button id="prevButton" class="control-btn">Indietro (←)</button>
+                    <button id="showAnswerButton" class="control-btn">Mostra risposta (↑)</button>
+                    <button id="nextButton" class="control-btn">Avanti (→)</button>
+                    <button id="copyQuestionButton" class="control-btn">Copia domanda</button>
+                </div>
+
+                <div class="options-container">
+                    <div class="checkbox-container">
+                        <input type="checkbox" id="ignoreCaseCheckbox" checked>
+                        <label for="ignoreCaseCheckbox">Ignora minuscole e maiuscole</label>
+                    </div>
+                    <div class="checkbox-container">
+                        <input type="checkbox" id="ignoreFormattingCheckbox" checked>
+                        <label for="ignoreFormattingCheckbox">Ignora spazi, punteggiatura, apostrofi e accenti</label>
+                    </div>
+                    <div class="checkbox-container">
+                        <input type="checkbox" id="speechCheckbox">
+                        <label for="speechCheckbox">Leggi domande</label>
+                        <select id="voiceSelect" class="voice-select" disabled>
+                            <option value="">Seleziona una voce</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dialogs -->
+    <dialog id="voiceSettingsDialog" class="settings-dialog">
+        <form method="dialog">
+            <h3>Impostazioni lettura</h3>
+            <div class="voice-setting">
+                <label for="questionVoiceSelect">Voce per le domande:</label>
+                <select id="questionVoiceSelect" required>
+                    <option value="">Seleziona una voce</option>
+                </select>
+            </div>
+            <div class="voice-setting">
+                <label for="answerVoiceSelect">Voce per le risposte:</label>
+                <select id="answerVoiceSelect" required>
+                    <option value="">Seleziona una voce</option>
+                </select>
+            </div>
+            <div class="voice-setting">
+                <label for="pauseSeconds">Pausa tra domanda e risposta (secondi):</label>
+                <input type="number" id="pauseSeconds" min="1" max="20" value="2" required>
+            </div>
+            <div class="dialog-buttons">
+                <button type="submit" value="confirm">OK</button>
+                <button type="button" onclick="this.closest('dialog').close()">Annulla</button>
+            </div>
+        </form>
+    </dialog>
+
+    <dialog id="speechRecognitionDialog" class="settings-dialog">
+        <form method="dialog">
+            <h3>Impostazioni riconoscimento vocale</h3>
+            <div class="voice-setting">
+                <label for="languageSelect">Lingua:</label>
+                <select id="languageSelect" required>
+                    <option value="it-IT">Italiano</option>
+                    <option value="en-US">English (US)</option>
+                    <option value="en-GB">English (UK)</option>
+                    <option value="fr-FR">Français</option>
+                    <option value="de-DE">Deutsch</option>
+                    <option value="es-ES">Español</option>
+                </select>
+            </div>
+            <div class="dialog-buttons">
+                <button type="submit" value="confirm" class="control-btn">OK</button>
+                <button type="button" class="control-btn" onclick="this.closest('dialog').close()">Annulla</button>
+            </div>
+        </form>
+    </dialog>
+
+    <!-- Dialog Edge TTS -->
+    <dialog id="edgeTTSDialog" class="settings-dialog">
+        <form method="dialog">
+            <h3>Impostazioni Edge TTS</h3>
+            <div class="voice-setting">
+                <label for="edgeVoiceSelect">Voce Edge:</label>
+                <select id="edgeVoiceSelect" required>
+                    <option value="it-IT-DiegoNeural">Diego (Italiano)</option>
+                    <option value="it-IT-ElsaNeural">Elsa (Italiano)</option>
+                    <option value="it-IT-IsabellaNeural">Isabella (Italiano)</option>
+                    <option value="it-IT-GiuseppeNeural">Giuseppe (Italiano)</option>
+                </select>
+            </div>
+            <div class="voice-setting">
+                <label for="edgeSpeed">Velocità:</label>
+                <input type="range" id="edgeSpeed" min="0.5" max="2" step="0.1" value="1">
+                <span id="speedValue">1.0x</span>
+            </div>
+            <div class="voice-setting">
+                <label for="edgePitch">Tonalità:</label>
+                <input type="range" id="edgePitch" min="-50" max="50" step="1" value="0">
+                <span id="pitchValue">0</span>
+            </div>
+            <div class="dialog-buttons">
+                <button type="submit" value="confirm">OK</button>
+                <button type="button" onclick="this.closest('dialog').close()">Annulla</button>
+            </div>
+        </form>
+    </dialog>
+
+    <!-- Dialog Certificato -->
+    <dialog id="certificateDialog" class="settings-dialog">
+        <form method="dialog">
+            <h3>Genera Certificato Studio</h3>
+            <div class="voice-setting">
+                <label for="studentName">Nome studente:</label>
+                <input type="text" id="studentName" required>
+            </div>
+            <div class="voice-setting">
+                <label for="minCorrect">Risposte corrette minime (%):</label>
+                <input type="number" id="minCorrect" min="50" max="100" value="70" required>
+            </div>
+            <div class="certificate-info">
+                <p>Progresso attuale:</p>
+                <div id="progressInfo"></div>
+            </div>
+            <div class="dialog-buttons">
+                <button type="submit" value="confirm">Genera Link</button>
+                <button type="button" onclick="this.closest('dialog').close()">Annulla</button>
+            </div>
+        </form>
+    </dialog>
+
+    <!-- Scripts -->
+    <script src="js/utils.js"></script>
+    <script src="js/edgeTTS.js"></script>
+    <script src="js/quiz.js"></script>
+    <script src="js/speech.js"></script>
+    <script src="js/autoplay.js"></script>
+    <script src="js/certificate.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
