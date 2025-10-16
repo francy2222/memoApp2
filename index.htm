@@ -673,6 +673,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+    
     // Aggiorna tutte le liste voci
     setTimeout(updateAllVoiceLists, 100);
 });
@@ -683,6 +684,14 @@ if (window.speechSynthesis) {
         updateAllVoiceLists();
     };
 }
+
+        document.addEventListener('DOMContentLoaded', function() {
+    // Quando cambia motore, aggiorna tutte le liste
+    window.updateAllVoiceLists = function() {
+        if (typeof loadVoices === 'function') loadVoices();
+        if (typeof loadVoicesForAutoPlay === 'function') loadVoicesForAutoPlay();
+    };
+});
 </script>
 </body>
 </html>
