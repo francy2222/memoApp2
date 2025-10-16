@@ -7,6 +7,16 @@ let recognition = null;
 let selectedLanguage = 'it-IT';
 let micPermissionGranted = false;
 
+document.getElementById('voiceSelect').addEventListener('change', function () {
+    if (currentTTSEngine === 'edge') {
+        selectedVoice = this.value; // Per Edge è l'ID della voce
+        localStorage.setItem('edgeTTSVoice', this.value);
+    } else {
+        const voices = window.speechSynthesis.getVoices();
+        selectedVoice = voices[this.value];
+    }
+});
+
 function loadVoices() {
     const voiceSelect = document.getElementById('voiceSelect');
     if (!voiceSelect) return;
