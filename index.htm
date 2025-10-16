@@ -636,6 +636,53 @@
         };
     }
     //#endregion
-    </script>
+
+// Listener per aggiornare le voci quando cambia il motore TTS
+function updateAllVoiceLists() {
+    // Aggiorna lista voci per "Leggi domande"
+    loadVoices();
+    
+    // Aggiorna lista voci per Autoplay
+    if (typeof loadVoicesForAutoPlay === 'function') {
+        loadVoicesForAutoPlay();
+    }
+}
+
+// Override del toggle TTS per aggiornare tutte le liste
+const originalToggleTTS = toggleTTSEngine;
+toggleTTSEngine = function() {
+    originalToggleTTS();
+    updateAllVoiceLists();
+};
+
+// Assicurati che Edge TTS sia inizializzato prima dell'uso
+document.addEventListener('DOMContentLoaded', function() {
+    // Inizializza Edge TTS se disponibile
+    if (typeof EdgeTTSModule !== 'undefined') {
+        EdgeTTSModule.init({
+            useCache: localStorage.getItem('edgeTTSCache') === 'true',
+            defaultVoice: localStorage.getItem('edgeTTSVoice') || 'it-IT-IsabellaNeural',
+            onEnd: () => {
+                // Callback per coordinare con riconoscimento vocale
+                if (typeof isListening !== 'undefined' && !inputEnabled) {
+                    isListening = true;
+                    const input = document.getElementById('answerInput');
+                    if (input) input.placeholder = "Ascolto...";
+                }
+            }
+        });
+    }
+    
+    // Aggiorna tutte le liste voci
+    setTimeout(updateAllVoiceLists, 100);
+});
+
+// Se cambiano le voci di sistema, aggiorna
+if (window.speechSynthesis) {
+    speechSynthesis.onvoiceschanged = function() {
+        updateAllVoiceLists();
+    };
+}
+</script>
 </body>
 </html>
